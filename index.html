@@ -2,323 +2,315 @@
 <html>
 
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta http-equiv="edit-Type" edit="text/html; charset=utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Croner Playground</title>
-  <style>
-    * {
-      font-family: monospace;
-    }
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="edit-Type" edit="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cron Tab Expression - Croner Playground</title>
+<style>
+* {
+  font-family: monospace;
+}
 
-    .show {
-      display: block;
-    }
+.show {
+  display: block;
+}
 
-    .hide {
-      display: none;
-    }
+.hide {
+  display: none;
+}
 
-    #error {
-      color: #FF5544;
-    }
+#error {
+  color: #880011;
+}
 
-    ul {
-      padding: 0;
-      list-style-type: none;
-    }
+ul {
+  padding: 0;
+  list-style-type: none;
+}
 
-    fieldset {
-      margin-bottom: 1em;
-    }
+fieldset {
+  margin-bottom: 1em;
+}
 
 
-    .blink {
-      animation: blink 1s 1;
-    }
+.blink {
+  animation: blink 1s 1;
+}
 
-    @keyframes blink {
-      0% {
-        background: red;
-      }
+@keyframes blink {
+  0% {
+    background: red;
+  }
 
-      100% {
-        background: transparent;
-      }
-    }
-  </style>
+  100% {
+    background: transparent;
+  }
+}
+</style>
 </head>
-
 <body>
 
-  <h1>Croner</h1>
-  <header>
-    <form id="form">
-      <label>
-        <strong>Cron Expression:</strong>
-        <input id="pattern" value="* * * * * *" autofocus>
-      </label>
-      <button id="start" type="submit">create</button>
-      <a id="clear" href="#">clear</a>
-      <br><br>
-      <label>
-        <strong>Options:</strong><br>
-        <textarea id="options" rows="12" cols="45">{
-  // maxRuns: 1,
-  // timezone: "America/New_York",
-  // utcOffset: 0
-  // paused: false,
-  // startAt: "2021-12-01T00:00:00",
-  // stopAt: "2021-12-02T00:00:00",
-  // interval: 90,
-  // legacyMode: true,
-  // protect: false,
-  // catch: false
+<h1>Croner</h1>
+<header>
+  <form id="form">
+    <label>
+      <strong>Cron Expression:</strong>
+      <input id="pattern" value="* * * * * *" autofocus>
+    </label>
+    <button id="start" type="submit">create</button>
+    <a id="clear" href="#">clear</a>
+    <br><br>
+    <label>
+      <strong>Options:</strong><br>
+      <textarea id="options" rows="12" cols="45">{
+// maxRuns: 1,
+// timezone: "America/New_York",
+// utcOffset: 0
+// paused: false,
+// startAt: "2021-12-01T00:00:00",
+// stopAt: "2021-12-02T00:00:00",
+// interval: 90,
+// legacyMode: true,
+// protect: false,
+// catch: false
 }</textarea>
-      </label>
-    </form>
-    <br>
-    <fieldset id="error" class="hide">
-      <legend>Error:</legend>
-      <div id="message"></div>
-    </fieldset>
+    </label>
+  </form>
+  <br>
+  <fieldset id="error" class="hide">
+    <legend>Error:</legend>
+    <div id="message"></div>
+  </fieldset>
+  <hr>
+  <p>
+    <strong>Job</strong>
+    <button id="pause" type="button">pause</button>
+    <button id="resume" type="button">resume</button>
+  </p>
+</header>
+
+<main>
+  <fieldset>
+    <legend>System Clock</legend>
+    <strong id="clock"></strong>
+  </fieldset>
+
+  <fieldset>
+    <strong>Previous run:</strong>
+    <div id="previous">never</div>
+  </fieldset>
+
+  <fieldset>
+    <strong>Triggered:</strong>
+    <span id="count">never</span>
+    <h2 id="current"> - </h2>
+  </fieldset>
+
+  <fieldset>
+    <strong>Next:</strong>
+    <span id="mstonext"></span>
     <hr>
-    <p>
-      <strong>Job</strong>
-      <button id="pause" type="button">pause</button>
-      <button id="resume" type="button">resume</button>
-    </p>
-  </header>
+    <strong>Next runs:</strong>
+    <div>
+      <ol id="next"></ol>
+    </div>
+  </fieldset>
+</main>
 
-  <main>
-    <fieldset>
-      <legend>System Clock</legend>
-      <strong id="clock"></strong>
-    </fieldset>
+<script type="module">
+  // See https://www.npmjs.com/package/croner documentation.
+  import Cron from 'https://esm.run/croner@6.0.3';
 
-    <fieldset>
-      <strong>Previous run:</strong>
-      <div id="previous">never</div>
-    </fieldset>
+  // global variable so you can acess in the console
+  var job;
+  var pattern;
+  var config = {
+    // maxRuns: 1,
+    // timezone: 'Europe/Stockholm',
+    // utcOffset: 0
+    // paused: false,
+    // startAt: "2021-12-01T00:00:00",
+    // stopAt: "2021-12-02T00:00:00",
+    // interval: 90,
+    // legacyMode: true,
+    // protect: false,
+    // catch: false
+  };
+  var count = 0;
 
-    <fieldset>
-      <strong>Triggered:</strong>
-      <span id="count">never</span>
-      <h2 id="current"> - </h2>
-    </fieldset>
+  function handler() {
+    // function to be executed
+    count++;
+    $('#count').innerText = `${count} times`;
+    $('#current').innerText = format(new Date());
 
-    <fieldset>
-      <strong>Next:</strong>
-      <span id="mstonext"></span>
-      <hr>
-      <strong>Next runs:</strong>
-      <div>
-        <ol id="next"></ol>
-      </div>
-    </fieldset>
-  </main>
+    // Blink
+    const container = $('#current').parentElement;
+    container.classList.add('blink');
+    setTimeout(_ => container.classList.remove('blink'), 900);
+  }
 
-  <script type="module">
-    // See https://www.npmjs.com/package/croner documentation.
-    import Cron from 'https://esm.run/croner@6.0.3';
+  function start() {
+    if (job) job.stop();
 
-    // global variable so you can acess in the console
-    var job;
-    var pattern;
-    var config = {
-      // maxRuns: 1,
-      // timezone: 'Europe/Stockholm',
-      // utcOffset: 0
-      // paused: false,
-      // startAt: "2021-12-01T00:00:00",
-      // stopAt: "2021-12-02T00:00:00",
-      // interval: 90,
-      // legacyMode: true,
-      // protect: false,
-      // catch: false
-    };
-    var count = 0;
+    count = 0;
+    $('#count').innerText = 'never';
+    $('#current').innerText = '-';
 
-    function handler() {
-      // function to be executed
-      count++;
-      $('#count').innerText = `${count} times`;
-      $('#current').innerText = format(new Date());
+    pattern = $('#pattern').value;
+    config = eval(`(${$('#options').value})`);
+    job = Cron(pattern, { ...config }, handler);
+    updateInterface();
+  }
 
-      // Blink
-      const container = $('#current').parentElement;
-      container.classList.add('blink');
-      setTimeout(_ => container.classList.remove('blink'), 900);
+  function resume() {
+    if (job) job.resume();
+    $('#pause').disabled = false;
+    $('#resume').disabled = true;
+  }
+
+  function pause() {
+    if (job) job.pause();
+    $('#pause').disabled = true;
+    $('#resume').disabled = false;
+  }
+
+  function updateInterface() {
+    if (job) {
+      const remaining = job.isRunning() ? `${formatMs(job.msToNext())}` : '(PAUSED)';
+      $('#mstonext').innerHTML = remaining;
+
+      const nextRuns = job.nextRuns(50);
+      $('#next').innerHTML = nextRuns.map(d => `<li>${format(d)}</li>`).join('\n');
+      $('#previous').innerHTML = (job.previousRun() ? format(job.previousRun()) : '-');
     }
+  }
 
-    function start() {
-      if (job) job.stop();
+  function startAction(e) {
+    if (e) e.preventDefault();
+    try {
+      start();
+      setUrlParams();
 
-      count = 0;
-      $('#count').innerText = 'never';
-      $('#current').innerText = '-';
-
-      pattern = $('#pattern').value;
-      config = eval(`(${$('#options').value})`);
-      job = Cron(pattern, {...config}, handler);
-      updateInterface();
-    }
-
-    function resume() {
-      if (job) job.resume();
+      $('#error').className = 'hide';
       $('#pause').disabled = false;
       $('#resume').disabled = true;
+    } catch (e) {
+      $('#error').className = 'show';
+      $('#message').innerHTML = e;
+    }
+  }
+
+  function clear() {
+    location.hash = '';
+    location.reload();
+  }
+
+  function format(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const parts = new Intl.DateTimeFormat('en-US', { month: 'long', weekday: 'long', timeZoneName: 'short' }).formatToParts(date);
+    const weekday = parts.find(part => part.type === 'weekday')?.value;
+    const fullMonth = parts.find(part => part.type === 'month')?.value;
+    const timezone = parts.find(part => part.type === 'timeZoneName')?.value;
+    const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} (${weekday} ${day} ${fullMonth} ${year} ${timezone})`;
+    return formattedDate;
+  }
+
+  function formatMs(milliseconds) {
+    const seconds = milliseconds / 1000;
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    const secondsRemaining = seconds % 60;
+    const minutesRemaining = minutes % 60;
+    const hoursRemaining = hours % 24;
+
+    const dayString = days > 0 ? `${days}d ` : '';
+    const hourString = hoursRemaining > 0 ? `${hoursRemaining}h ` : '';
+    const minuteString = minutesRemaining > 0 ? `${minutesRemaining}m ` : '';
+    const secondString = secondsRemaining.toFixed(2) + 's';
+
+    return dayString + hourString + minuteString + secondString;
+  }
+
+  const MiniJSON = {
+    stringify(obj) {
+      return Object.entries(obj).map(([key, value]) => `${encodeURIComponent(key)}:${encodeURIComponent(value)}`).join(',');
+    },
+    parse(str) {
+      const parseValue = (v) => {
+        if (v === 'true') return true;
+        else if (v === 'false') return false;
+        else if (v === 'null') return null;
+        else if (v === 'undefined') return;
+        else if (/^\s*$/.test(v)) return v;
+        else if (!isNaN(v)) return +v;          
+        return v;
+      };
+      str = str.replace(/,/g, '&').replace(/:/g, '=');
+      const params = new URLSearchParams(str);
+      return Object.fromEntries([...params].map(([k, v]) => [decodeURIComponent(k), parseValue(decodeURIComponent(v))]));
+    },
+  };
+
+  function setUrlParams() {
+    let str = pattern.replace(/ /g, '_') + '&'; // trailing & so url works when posted  markdown
+    if (Object.keys(config).length) {
+      str += MiniJSON.stringify(config);
     }
 
-    function pause() {
-      if (job) job.pause();
-      $('#pause').disabled = true;
-      $('#resume').disabled = false;
-    }
+    //location.hash = str;
+    history.pushState(null, null, '#' + str);
+  }
 
-    function updateInterface() {
-      if (job) {
-        const remaining = job.isRunning() ? `${formatMs(job.msToNext())}` : '(PAUSED)';
-        $('#mstonext').innerHTML = remaining;
+  function getUrlParams() {
+    let str = location.hash.replace(/^#/, '');
 
-        const nextRuns = job.nextRuns(50);
-        $('#next').innerHTML = nextRuns.map(d => `<li>${format(d)}</li>`).join('\n');
-        $('#previous').innerHTML = (job.previousRun() ? format(job.previousRun()) : '-');
-      }
-    }
+    const separator = '&';
+    const i = str.indexOf(separator);
+    let cron = i === -1 ? str : str.slice(0, i);
+    let options = i > -1 ? str.slice(i + separator.length) : '';
 
-    function startAction(e) {
-      if (e) e.preventDefault();
-      try {
-        start();
-        setHash();
+    // unescape cron
+    cron = cron.replace(/_/g, ' ');
 
-        $('#error').className = 'hide';
-        $('#pause').disabled = false;
-        $('#resume').disabled = true;
-      } catch (e) {
-        $('#error').className = 'show';
-        $('#message').innerHTML = e;
-      }
-    }
+    options = MiniJSON.parse(options);
+    if (Object.keys(options).length) $('#options').value = JSON.stringify(options, null, 2);
 
-    function clear() {
-      location.hash = '';
-      location.reload();
-    }
+    if (cron) $('#pattern').value = cron;
+  }
 
-    function format(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-      const parts = new Intl.DateTimeFormat('en-US', { month: 'long', weekday: 'long', timeZoneName: 'short' }).formatToParts(date);
-      const weekday = parts.find(part => part.type === 'weekday')?.value;
-      const fullMonth = parts.find(part => part.type === 'month')?.value;
-      const timezone = parts.find(part => part.type === 'timeZoneName')?.value;
-      const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} (${weekday} ${day} ${fullMonth} ${year} ${timezone})`;
-      return formattedDate;
-    }
+  const $ = s => document.querySelector(s);
 
-    function formatMs(milliseconds) {
-      const seconds = milliseconds / 1000;
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
+  window.onload = function () {
+    getUrlParams();
 
-      const secondsRemaining = seconds % 60;
-      const minutesRemaining = minutes % 60;
-      const hoursRemaining = hours % 24;
+    // user changed url by typing or using back/forward
+    window.onhashchange = () => getUrlParams() | startAction();
 
-      const dayString = days > 0 ? `${days}d ` : '';
-      const hourString = hoursRemaining > 0 ? `${hoursRemaining}h ` : '';
-      const minuteString = minutesRemaining > 0 ? `${minutesRemaining}m ` : '';
-      const secondString = secondsRemaining.toFixed(2) + 's';
+    $('#form').addEventListener('submit', startAction);
+    $('#clear').addEventListener('click', clear);
+    $('#pause').addEventListener('click', pause);
+    $('#resume').addEventListener('click', resume);
 
-      return dayString + hourString + minuteString + secondString;
-    }
+    setInterval(() => {
 
-    const MiniJson = {
-      stringify(obj) {
-        return Object.entries(obj)
-          .map(([key, value]) => `${encodeURIComponent(key)}:${encodeURIComponent(value)}`)
-          .join(',');
-      },
-      parse(str) {
-        str = str.replace(/,/g,'&').replace(/:/g,'=');
-        const params = new URLSearchParams(str);
-        const obj = {};
-        for (const [key, value] of params.entries()) {
-          obj[decodeURIComponent(key)] = this.decodeValue(value);
-        }
-        return obj;
-      },
-      decodeValue(value) {
-        if (/^\d+$/.test(value)) {
-          return parseInt(value, 10);
-        } else if (/^\d+\.\d+$/.test(value)) {
-          return parseFloat(value);
-        } else if (value === 'true') {
-          return true;
-        } else if (value === 'false') {
-          return false;
-        } else {
-          return decodeURIComponent(value);
-        }
-      }
-    };
+      // update clock
+      const now = new Date();
+      $('#clock').innerText = `${format(now)}`;
 
-    function setHash() {
-      let str = pattern.replace(/ /g,'_');
-      if (Object.keys(config).length) {
-        str+='&'+MiniJson.stringify(config);
-      }
-      location.hash = str;
-    }
-    
-    function getHash() {
-      let str = location.hash.replace(/^#/, '');
+      updateInterface();
+    }, 1000 / 16);
 
-      const separator = '&';
-      const i = str.indexOf(separator);
-      let cron = i===-1 ? str : str.slice(0, i);
-      let options = i>-1 ? str.slice(i + separator.length) : '';
+    startAction();
+  };
 
-      // unescape cron
-      cron = cron.replace(/_/g,' ');
-
-      options = MiniJson.parse(options);
-      if (Object.keys(options).length) $('#options').value = JSON.stringify(options, null, 2);
-
-      if (cron) $('#pattern').value = cron;
-    }
-
-    const $ = s => document.querySelector(s);
-
-    window.onload = function() {
-      getHash();
-
-      $('#form').addEventListener('submit', startAction);
-      $('#clear').addEventListener('click', clear);
-      $('#pause').addEventListener('click', pause);
-      $('#resume').addEventListener('click', resume);
-
-      setInterval(() => {
-
-        // update clock
-        const now = new Date();
-        $('#clock').innerText = `${format(now)}`;
-
-        updateInterface();
-      }, 1000 / 16);
-
-      startAction();
-    };
-
-  </script>
-
+</script>
 </body>
-
 </html>
